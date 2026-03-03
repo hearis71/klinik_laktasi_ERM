@@ -102,10 +102,11 @@ model MedicalRecord {
   attachments     String?  // JSON array of file URLs
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   patient         Patient      @relation(fields: [patientId], references: [id])
   user            User         @relation(fields: [userId], references: [id], name: "RecordedBy")
-  
+  lactationConsultation LactationConsultation?
+
   @@map("medical_records")
 }
 
