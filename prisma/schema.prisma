@@ -1,0 +1,179 @@
+// Prisma schema for Klinik Laktasi - Electronic Medical Record (ERM)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for staff/healthcare providers
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(STAFF)
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  appointments    Appointment[]
+  medicalRecords  MedicalRecord[] @relation("RecordedBy")
+  
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  STAFF
+}
+
+// Patient model (Ibu/Bayi)
+model Patient {
+  id              String   @id @default(uuid())
+  medicalRecordId String   @unique
+  motherName      String
+  motherAge       Int
+  motherPhone     String
+  motherAddress   String?
+  babyName        String
+  babyAge         String   // e.g., "3 bulan", "2 minggu"
+  babyGender      Gender
+  complaint       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  appointments    Appointment[]
+  medicalRecords  MedicalRecord[]
+  
+  @@map("patients")
+}
+
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+// Appointment model
+model Appointment {
+  id          String   @id @default(uuid())
+  patientId   String
+  userId      String?
+  date        DateTime
+  time        String
+  status      AppointmentStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  patient     Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user        User?      @relation(fields: [userId], references: [id])
+  
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Medical Record model (EMR)
+model MedicalRecord {
+  id              String   @id @default(uuid())
+  recordNumber    String   @unique
+  patientId       String
+  userId          String
+  visitDate       DateTime @default(now())
+  chiefComplaint  String
+  history         String?
+  assessment      String?
+  plan            String?
+  lactationIssue  String?
+  intervention    String?
+  followUpPlan    String?
+  attachments     String?  // JSON array of file URLs
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  patient         Patient      @relation(fields: [patientId], references: [id])
+  user            User         @relation(fields: [userId], references: [id], name: "RecordedBy")
+  
+  @@map("medical_records")
+}
+
+// Lactation Consultation specific data
+model LactationConsultation {
+  id              String   @id @default(uuid())
+  medicalRecordId String   @unique
+  breastfeedingFreq    String?    // e.g., "8-12 kali/hari"
+  breastfeedingDuration String?   // e.g., "15-20 menit"
+  latchQuality      LatchQuality?
+  milkSupply        MilkSupply?
+  nippleCondition   String?
+  breastCondition   String?
+  babyWeight        Float?     // in kg
+  babyLength        Float?     // in cm
+  headCircumference Float?     // in cm
+  feedingMethod     FeedingMethod?
+  supplementUse     Boolean    @default(false)
+  supplementType    String?
+  educationGiven    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  
+  @@map("lactation_consultations")
+}
+
+enum LatchQuality {
+  GOOD
+  FAIR
+  POOR
+  NOT_ASSESSED
+}
+
+enum MilkSupply {
+  ABUNDANT
+  ADEQUATE
+  LOW
+  VERY_LOW
+  NOT_ASSESSED
+}
+
+enum FeedingMethod {
+  EXCLUSIVE_BREASTFEEDING
+  MIXED_FEEDING
+  FORMULA_FEEDING
+  EXPRESSED_BREASTMILK
+}
+
+// Visit tracking
+model Visit {
+  id              String   @id @default(uuid())
+  patientId       String
+  visitDate       DateTime @default(now())
+  visitType       VisitType
+  purpose         String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("visits")
+}
+
+enum VisitType {
+  ROUTINE_CHECKUP
+  LACTATION_CONSULTATION
+  FOLLOW_UP
+  EMERGENCY
+  OTHER
+}
